@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Catholic Bible App</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom styles for the Inter font and general body styling */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6; /* Light gray background */
+            color: #374151; /* Dark gray text */
+        }
+        /* Style for the custom message box */
+        .message-box {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            z-index: 1000;
+            display: none; /* Hidden by default */
+            text-align: center;
+        }
+        .message-box button {
+            margin-top: 15px;
+            padding: 8px 16px;
+            background-color: #4f46e5;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .message-box button:hover {
+            background-color: #4338ca;
+        }
+        /* Loading spinner styles */
+        .loading-spinner {
+            border: 4px solid #f3f3f3; /* Light grey */
+            border-top: 4px solid #4f46e5; /* Blue */
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center py-8 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-4xl w-full bg-white shadow-lg rounded-xl p-6 sm:p-8">
+        <!-- Header Section -->
+        <header class="text-center mb-8">
+            <h1 class="text-4xl sm:text-5xl font-extrabold text-indigo-700 mb-2 rounded-lg p-2">
+                Catholic Bible
+            </h1>
+            <p class="text-lg text-gray-600">Catholic Public Domain Version (CPDV)</p>
+        </header>
+
+        <!-- Navigation Section -->
+        <section class="mb-8 p-4 bg-indigo-50 rounded-lg shadow-inner flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-4">
+            <div class="flex flex-col w-full sm:w-auto">
+                <label for="book-select" class="text-sm font-medium text-gray-700 mb-1">Select Book:</label>
+                <select id="book-select" class="block w-full sm:w-48 px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                    <!-- Books will be populated by JavaScript -->
+                </select>
+            </div>
+
+            <div class="flex flex-col w-full sm:w-auto">
+                <label for="chapter-select" class="text-sm font-medium text-gray-700 mb-1">Select Chapter:</label>
+                <select id="chapter-select" class="block w-full sm:w-40 px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                    <!-- Chapters will be populated by JavaScript -->
+                </select>
+            </div>
+
+            <button id="load-chapter-btn" class="mt-4 sm:mt-0 px-6 py-2 bg-indigo-600 text-white font-semibold rounded-md shadow-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition duration-150 ease-in-out">
+                Load Chapter
+            </button>
+        </section>
+
+        <!-- Bible Content Display Area -->
+        <section id="bible-content" class="bg-gray-50 p-6 rounded-lg shadow-md border border-gray-200 min-h-[300px]">
+            <h2 id="current-chapter-title" class="text-2xl font-bold text-indigo-800 mb-4"></h2>
+            <div id="verses-display" class="text-gray-800 leading-relaxed text-base">
+                <div class="loading-spinner"></div>
+                <p class="text-center text-gray-500 mt-4">Loading and parsing Bible data (CPDV)...</p>
+                <p class="text-center text-red-500 text-sm mt-2">
+                    Please ensure 'cpdv.txt' is in the same folder as this HTML file.
+                </p>
+            </div>
+        </section>
+    </div>
+
+    <!-- Custom Message Box -->
+    <div id="message-box" class="message-box rounded-lg shadow-lg">
+        <p id="message-text" class="text-gray-800 text-lg"></p>
+        <button id="message-box-ok-btn">OK</button>
+    </div>
+
+    <script>
+        // Global variable to hold Bible data
+        let catholicBibleData = {};
+
+        const bookSelect = document.getElementById('book-select');
+        const chapterSelect = document.getElementById('chapter-select');
+        const loadChapterBtn = document.getElementById('load-chapter-btn');
+        const currentChapterTitle = document.getElementById('current-chapter-title');
+        const versesDisplay = document.getElementById('verses-display');
+        const messageBox = document.getElementById('message-box');
+        const messageText = document.getElementById('message-text');
+        const messageBoxOkBtn = document.getElementById('message-box-ok-btn');
+
+        /**
+         * Displays a custom message box instead of alert().
+         * @param {string} message The message to display.
+         */
+        function showMessageBox(message) {
+            messageText.textContent = message;
+            messageBox.style.display = 'block';
+        }
+
+        // Event listener for the message box OK button
+        messageBoxOkBtn.addEventListener('click', () => {
+            messageBox.style.display = 'none';
+        });
+
+        /**
+         * Loads and parses Bible data from the external TXT file.
+         */
+        async function loadBibleData() {
+            versesDisplay.innerHTML = '<div class="loading-spinner"></div><p class="text-center text-gray-500 mt-4">Loading and parsing Bible data (CPDV)...</p>';
+            bookSelect.disabled = true;
+            chapterSelect.disabled = true;
+            loadChapterBtn.disabled = true;
+
+            // IMPORTANT: The 'cpdv.txt' file must be in the same directory as this HTML file
+            // for the 'fetch' operation to succeed due to browser security (CORS) policies.
+            const bibleDataUrl = 'cpdv.txt';
+
+            try {
+                const response = await fetch(bibleDataUrl);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}. Please ensure 'cpdv.txt' is in the same folder as this HTML file.`);
+                }
+                const textData = await response.text();
+                parseBibleText(textData); // Parse the text into our data structure
+
+                populateBooks(); // Populate books after data is loaded
+                versesDisplay.innerHTML = '<p class="text-center text-gray-500">Select a book and chapter to begin reading.</p>';
+                bookSelect.disabled = false;
+                chapterSelect.disabled = false;
+                loadChapterBtn.disabled = false;
+            } catch (error) {
+                console.error('Error loading or parsing Bible data:', error);
+                versesDisplay.innerHTML = '<p class="text-center text-red-600">Failed to load Bible data. See console for details.</p>';
+                showMessageBox(`Failed to load Bible data: ${error.message}. Please ensure 'cpdv.txt' is in the same folder as this HTML file.`);
+            }
+        }
+
+        /**
+         * Parses the plain text Bible data into the catholicBibleData object.
+         * Expected format for CPDV from openbible.com: "BookName Chapter:Verse Text"
+         * Example: "Genesis 1:1 In the beginning God created the heaven and the earth."
+         * @param {string} textData The raw text content of the Bible file.
+         */
+        function parseBibleText(textData) {
+            catholicBibleData = {}; // Reset data
+            const lines = textData.split('\n');
+            let currentBook = '';
+            let currentChapter = '';
+
+            // Regex to match "BookName Chapter:Verse Text"
+            // Handles multi-word book names like "Song of Solomon"
+            const regex = /^([A-Za-z\s]+)\s(\d+):(\d+)\s(.*)$/;
+
+            lines.forEach(line => {
+                const trimmedLine = line.trim();
+
+                // Skip empty lines or lines that are too short to be meaningful
+                if (trimmedLine.length === 0 || trimmedLine.length < 5) {
+                    return;
+                }
+
+                const match = trimmedLine.match(regex);
+                if (match) {
+                    const book = match[1].trim();
+                    const chapter = match[2];
+                    const verseNum = match[3];
+                    const verseText = match[4].trim();
+
+                    // Update current book and chapter
+                    if (book !== currentBook) {
+                        currentBook = book;
+                        currentChapter = ''; // Reset chapter when book changes
+                    }
+                    if (chapter !== currentChapter) {
+                        currentChapter = chapter;
+                    }
+
+                    if (!catholicBibleData[currentBook]) {
+                        catholicBibleData[currentBook] = {};
+                    }
+                    if (!catholicBibleData[currentBook][currentChapter]) {
+                        catholicBibleData[currentBook][currentChapter] = "";
+                    }
+                    // Append verse number and text to the chapter string
+                    catholicBibleData[currentBook][currentChapter] += `${verseNum} ${verseText} `;
+                }
+            });
+            console.log("Bible data parsed successfully. Number of books:", Object.keys(catholicBibleData).length);
+        }
+
+        // Function to populate books dropdown
+        function populateBooks() {
+            bookSelect.innerHTML = '<option value="">-- Select a Book --</option>';
+            // Sort book names alphabetically for better user experience
+            const sortedBooks = Object.keys(catholicBibleData).sort();
+            sortedBooks.forEach(book => {
+                const option = document.createElement('option');
+                option.value = book;
+                option.textContent = book;
+                bookSelect.appendChild(option);
+            });
+        }
+
+        // Function to populate chapters dropdown based on selected book
+        function populateChapters() {
+            const selectedBook = bookSelect.value;
+            chapterSelect.innerHTML = '<option value="">-- Select a Chapter --</option>';
+            if (selectedBook && catholicBibleData[selectedBook]) {
+                // Get chapters and sort them numerically
+                const chapters = Object.keys(catholicBibleData[selectedBook]).sort((a, b) => parseInt(a) - parseInt(b));
+                chapters.forEach(chapter => {
+                    const option = document.createElement('option');
+                    option.value = chapter;
+                    option.textContent = `Chapter ${chapter}`;
+                    chapterSelect.appendChild(option);
+                });
+            }
+        }
+
+        // Function to load and display the selected chapter
+        function loadChapter() {
+            const selectedBook = bookSelect.value;
+            const selectedChapter = chapterSelect.value;
+
+            if (selectedBook && selectedChapter) {
+                const chapterText = catholicBibleData[selectedBook][selectedChapter];
+                currentChapterTitle.textContent = `${selectedBook} Chapter ${selectedChapter}`;
+                // Split the chapter text into verses (assuming verses are separated by numbers followed by a space)
+                const verses = chapterText.split(/(\d+)\s/).filter(s => s.trim() !== '');
+                let formattedVerses = '';
+                for (let i = 0; i < verses.length; i += 2) {
+                    if (verses[i] && verses[i+1]) {
+                        formattedVerses += `<p class="mb-2"><strong class="text-indigo-700">${verses[i]}.</strong> ${verses[i+1].trim()}</p>`;
+                    }
+                }
+                versesDisplay.innerHTML = formattedVerses || '<p class="text-center text-gray-500">Chapter content not found.</p>';
+            } else {
+                currentChapterTitle.textContent = '';
+                versesDisplay.innerHTML = '<p class="text-center text-gray-500">Please select both a book and a chapter.</p>';
+                showMessageBox('Please select both a book and a chapter to load.');
+            }
+        }
+
+        // Event Listeners
+        bookSelect.addEventListener('change', populateChapters);
+        loadChapterBtn.addEventListener('click', loadChapter);
+
+        // Initial loading of Bible data when the page loads
+        document.addEventListener('DOMContentLoaded', loadBibleData);
+    </script>
+</body>
+</html>

@@ -94,11 +94,20 @@
             <div id="verses-display" class="text-gray-800 leading-relaxed text-base">
                 <div class="loading-spinner"></div>
                 <p class="text-center text-gray-500 mt-4">Loading and parsing Bible data (CPDV)...</p>
-                <p class="text-center text-red-500 text-sm mt-2">
-                    Please ensure 'cpdv.txt' is in the same folder as this HTML file.
+                <p class="text-center text-red-500 text-sm mt-2 font-semibold">
+                    If loading fails, please ensure 'cpdv.txt' is in the <strong class="text-red-700">same folder</strong> as this HTML file.
+                    Also, check your browser's developer console (F12) for more specific errors.
                 </p>
             </div>
         </section>
+
+        <!-- Footer Section -->
+        <footer class="text-center mt-8 pt-4 border-t border-gray-200 text-gray-600 text-sm">
+            <p class="mb-1">Visit us: <a href="http://jeremyworld.org" target="_blank" class="text-indigo-600 hover:underline">jeremyworld.org</a></p>
+            <p class="mb-1">Contact: <a href="mailto:catholicbible@jeremyworld.org" class="text-indigo-600 hover:underline">catholicbible@jeremyworld.org</a></p>
+            <p class="mb-4">Support us: <a href="http://donate.jeremyworld.org" target="_blank" class="text-indigo-600 hover:underline">donate.jeremyworld.org</a></p>
+            <p class="text-xs text-gray-400">Powered by Google and Microsoft</p>
+        </footer>
     </div>
 
     <!-- Custom Message Box -->
@@ -110,6 +119,24 @@
     <script>
         // Global variable to hold Bible data
         let catholicBibleData = {};
+
+        // Canonical order of books in the Catholic Bible
+        const catholicBookOrder = [
+            "Genesis", "Exodus", "Leviticus", "Numbers", "Deuteronomy",
+            "Joshua", "Judges", "Ruth", "1 Samuel", "2 Samuel", "1 Kings", "2 Kings",
+            "1 Chronicles", "2 Chronicles", "Ezra", "Nehemiah", "Tobit", "Judith",
+            "Esther", "1 Maccabees", "2 Maccabees", "Job", "Psalms", "Proverbs",
+            "Ecclesiastes", "Song of Solomon", "Wisdom", "Sirach", "Isaiah",
+            "Jeremiah", "Lamentations", "Baruch", "Ezekiel", "Daniel", "Hosea",
+            "Joel", "Amos", "Obadiah", "Jonah", "Micah", "Nahum", "Habakkuk",
+            "Zephaniah", "Haggai", "Zechariah", "Malachi",
+            "Matthew", "Mark", "Luke", "John", "Acts", "Romans",
+            "1 Corinthians", "2 Corinthians", "Galatians", "Ephesians", "Philippians",
+            "Colossians", "1 Thessalonians", "2 Thessalonians", "1 Timothy", "2 Timothy",
+            "Titus", "Philemon", "Hebrews", "James", "1 Peter", "2 Peter", "1 John",
+            "2 John", "3 John", "Jude", "Revelation"
+        ];
+
 
         const bookSelect = document.getElementById('book-select');
         const chapterSelect = document.getElementById('chapter-select');
@@ -150,7 +177,7 @@
             try {
                 const response = await fetch(bibleDataUrl);
                 if (!response.ok) {
-                    throw new Error(`HTTP error! Status: ${response.status}. Please ensure 'cpdv.txt' is in the same folder as this HTML file.`);
+                    throw new Error(`HTTP error! Status: ${response.status}. This is likely due to 'cpdv.txt' not being found or a CORS issue. Please ensure 'cpdv.txt' is in the same folder as this HTML file.`);
                 }
                 const textData = await response.text();
                 parseBibleText(textData); // Parse the text into our data structure
@@ -223,8 +250,10 @@
         // Function to populate books dropdown
         function populateBooks() {
             bookSelect.innerHTML = '<option value="">-- Select a Book --</option>';
-            // Sort book names alphabetically for better user experience
-            const sortedBooks = Object.keys(catholicBibleData).sort();
+            // Filter and sort books based on the predefined canonical order
+            const availableBooks = Object.keys(catholicBibleData);
+            const sortedBooks = catholicBookOrder.filter(book => availableBooks.includes(book));
+
             sortedBooks.forEach(book => {
                 const option = document.createElement('option');
                 option.value = book;
